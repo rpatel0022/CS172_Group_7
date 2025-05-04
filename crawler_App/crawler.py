@@ -98,16 +98,17 @@ def crawl_subreddit(subreddit_name):
     except Exception as e:
         print(f"❌ Error in r/{subreddit_name}: {e}")
 
-#Update these subreddit posts according to yours. I will be running using this try to use different ones so we can get different data. 
-subreddits = [
-    "cookingforbeginners", "culinary", "askculinary", "Old_Recipes", "seriouseats",
-    "GifRecipes", "KitchenConfidential", "koreanfood", "cookware", "askbaking",
-    "castriron", "carbonsteel", "askfoodhistorians", "foodphotography", "grilledcheese"
-]
-
 #Try running with extra workers to see if it speeds up the process
 if __name__ == "__main__":
-    print("🔧 Starting parallel subreddit crawling...")
+    subreddit_input = input("Enter subreddits to crawl (comma-separated): ")
+    subreddits = [s.strip() for s in subreddit_input.split(",") if s.strip()]
+
+    if not subreddits:
+        print(" No valid subreddits provided. Exiting.")
+        exit(1)
+
+    print(f"Crawling: {', '.join(subreddits)}")
     with ThreadPoolExecutor(max_workers=4) as executor:
         executor.map(crawl_subreddit, subreddits)
-    print("\n🎉 All subreddits processed!")
+
+    print("\n All subreddits processed!")
