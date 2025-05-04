@@ -53,9 +53,14 @@ def crawl_subreddit(subreddit_name):
         current_size = 0
         total_size = 0
         posts_fetched = 0
+        seen_post_ids = set()
 
         for source in sources:
             for post in source:
+                post_id = post.id
+                if post_id in seen_post_ids:
+                    continue  
+                seen_post_ids.add(post_id)
                 if total_size >= TOTAL_SIZE_LIMIT:
                     print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
                     break
