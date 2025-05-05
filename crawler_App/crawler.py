@@ -1,94 +1,126 @@
 import praw
 import os
 import json
-from dotenv import load_dotenv
+import re
+import time
 import requests
 from bs4 import BeautifulSoup
-import time
+from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
 
-# Load environment variables
+# Load Reddit API credentials
 load_dotenv()
-
-# Reddit credentials
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
-user_agent = "RakshanRecipeCollector/1.0"
+user_agent = "RushiRecipeCollector/1.0"
+reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
 
-# Reddit client setup
-reddit = praw.Reddit(client_id=client_id,
-                     client_secret=client_secret,
-                     user_agent=user_agent)
+# Config
+MAX_FILE_SIZE = 10 * 1024 * 1024         # 10 MB
+TOTAL_SIZE_LIMIT = 500 * 1024 * 1024     # 500 MB
+OUTPUT_DIR = "archit_data"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Target subreddit
-subreddit = reddit.subreddit('recipes')
+def get_next_file_index(prefix):
+    files = os.listdir(OUTPUT_DIR)
+    pattern = re.compile(rf'{re.escape(prefix)}_(\d+)\.json')
+    indexes = [int(m.group(1)) for f in files if (m := pattern.match(f))]
+    return max(indexes) + 1 if indexes else 0
 
-# File size constants
-MAX_FILE_SIZE = 512 * 1024            # 0.5 MB per file
-TOTAL_SIZE_LIMIT = 4 * 1024 * 1024    # 4 MB total
+def fetch_html_title(url):
+    try:
+        if url.startswith("http") and not url.endswith((".jpg", ".png", ".gif", ".pdf", ".jpeg")):
+            resp = requests.get(url, timeout=5)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            return soup.title.string.strip() if soup.title else ""
+    except:
+        return ""
+    return ""
 
-file_index = 0
-current_size = 0
-total_size = 0
-posts_fetched = 0
+def crawl_subreddit(subreddit_name):
+    try:
+        print(f"\n🟡 Starting r/{subreddit_name}...")
+        subreddit = reddit.subreddit(subreddit_name)
+        sources = [
+            subreddit.top(time_filter='all', limit=None),
+            subreddit.hot(limit=None),
+            subreddit.new(limit=None)
+        ]
 
-# Output directory
-os.makedirs("rakshan_data", exist_ok=True)
-current_file = open(f'rakshan_data/rakshan_posts_{file_index}.json', 'w')
+        file_prefix = f"{subreddit_name}_posts"
+        file_index = get_next_file_index(file_prefix)
+        current_file = open(os.path.join(OUTPUT_DIR, f"{file_prefix}_{file_index}.json"), 'w')
+        current_size = 0
+        total_size = 0
+        posts_fetched = 0
+        seen_post_ids = set()
 
-# Sources to fetch from
-sources = [
-    subreddit.top(time_filter='all', limit=None),
-    subreddit.hot(limit=None),
-    subreddit.new(limit=None)
-]
+        for source in sources:
+            for post in source:
+                post_id = post.id
+                if post_id in seen_post_ids:
+                    continue
+                seen_post_ids.add(post_id)
+                if total_size >= TOTAL_SIZE_LIMIT:
+                    print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
+                    break
 
-for source in sources:
-    for post in source:
-        if total_size >= TOTAL_SIZE_LIMIT:
-            break
+                top_comments = []
+                try:
+                    post.comments.replace_more(limit=0)
+                    top_comments = [comment.body for comment in post.comments[:100]]
+                except Exception as e:
+                    print(f"⚠️ Error fetching comments for post {post_id}: {e}")
+                post_data = {
+                    'title': post.title,
+                    'selftext': post.selftext,
+                    'url': post.url,
+                    'created_utc': post.created_utc,
+                    'score': post.score,
+                    'author': str(post.author),
+                    'num_comments': post.num_comments,
+                    'permalink': post.permalink,
+                    'html_title': fetch_html_title(post.url),
+                    'top_comments': top_comments
+                }
 
-        html_title = ""
-        try:
-            if post.url.startswith("http") and not post.url.endswith((".jpg", ".png", ".gif", ".pdf", ".jpeg")):
-                response = requests.get(post.url, timeout=5)
-                soup = BeautifulSoup(response.text, 'html.parser')
-                if soup.title:
-                    html_title = soup.title.string.strip()
-        except Exception:
-            html_title = ""
+                line = json.dumps(post_data) + "\n"
+                line_size = len(line.encode('utf-8'))
 
-        post_data = {
-            'title': post.title,
-            'selftext': post.selftext,  # 🔥 added to boost post size
-            'url': post.url,
-            'created_utc': post.created_utc,
-            'score': post.score,
-            'author': str(post.author),
-            'num_comments': post.num_comments,
-            'permalink': post.permalink,
-            'html_title': html_title
-        }
+                if current_size + line_size > MAX_FILE_SIZE:
+                    current_file.close()
+                    file_index += 1
+                    current_file = open(os.path.join(OUTPUT_DIR, f"{file_prefix}_{file_index}.json"), 'w')
+                    current_size = 0
+                    print(f"🔁 Switched to new file: {file_prefix}_{file_index}.json")
 
-        line = json.dumps(post_data) + "\n"
-        line_size = len(line.encode('utf-8'))
+                current_file.write(line)
+                current_size += line_size
+                total_size += line_size
+                posts_fetched += 1
 
-        if current_size + line_size > MAX_FILE_SIZE:
-            current_file.close()
-            file_index += 1
-            current_file = open(f'rakshan_data/rakshan_posts_{file_index}.json', 'w')
-            current_size = 0
-            print(f"🔁 Switched to file: rakshan_posts_{file_index}.json")
+                if posts_fetched % 25 == 0:
+                    print(f"📥 {subreddit_name}: {posts_fetched} posts, file: {file_prefix}_{file_index}.json, size: {current_size / 1024:.2f} KB")
 
-        current_file.write(line)
-        current_size += line_size
-        total_size += line_size
-        posts_fetched += 1
+                time.sleep(0.25)  # throttle to avoid rate limit
 
-        if posts_fetched % 25 == 0:
-            print(f"{posts_fetched} posts fetched, file: rakshan_posts_{file_index}.json, file size: {current_size / 1024:.2f} KB")
+        current_file.close()
+        print(f"✅ Finished r/{subreddit_name}: {posts_fetched} posts, {file_index + 1} files, ~{total_size / 1024 / 1024:.2f} MB")
 
-        time.sleep(0.5)
+    except Exception as e:
+        print(f"❌ Error in r/{subreddit_name}: {e}")
 
-# Finalize
-current_file.close()
-print(f"Data extraction complete. {posts_fetched} posts saved across {file_index + 1} files (~{total_size / 1024 / 1024:.2f} MB total).")
+#Try running with extra workers to see if it speeds up the process
+if __name__ == "__main__":
+    subreddit_input = input("Enter subreddits to crawl (comma-separated): ")
+    subreddits = [s.strip() for s in subreddit_input.split(",") if s.strip()]
+
+    if not subreddits:
+        print(" No valid subreddits provided. Exiting.")
+        exit(1)
+
+    print(f"Crawling: {', '.join(subreddits)}")
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        executor.map(crawl_subreddit, subreddits)
+
+    print("\n All subreddits processed!")
