@@ -18,7 +18,7 @@ reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agen
 # Config
 MAX_FILE_SIZE = 10 * 1024 * 1024         # 10 MB
 TOTAL_SIZE_LIMIT = 500 * 1024 * 1024     # 500 MB
-OUTPUT_DIR = "archit_data"
+OUTPUT_DIR = "rushi_data"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def get_next_file_index(prefix):
