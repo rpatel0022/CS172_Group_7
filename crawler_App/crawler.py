@@ -103,7 +103,6 @@ def crawl_subreddit(subreddit_name):
     except Exception as e:
         print(f"❌ Error in r/{subreddit_name}: {e}")
 
-#Try running with extra workers to see if it speeds up the process
 if __name__ == "__main__":
     subreddit_input = input("Enter subreddits to crawl (comma-separated): ")
     subreddits = [s.strip() for s in subreddit_input.split(",") if s.strip()]
