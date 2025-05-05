@@ -64,7 +64,12 @@ def crawl_subreddit(subreddit_name):
                 if total_size >= TOTAL_SIZE_LIMIT:
                     print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
                     break
-
+                top_comments = []
+                try:
+                    post.comments.replace_more(limit=0)
+                    top_comments = [comment.body for comment in post.comments[:100]]
+                except Exception as e:
+                    print(f"⚠️ Error fetching comments for post {post_id}: {e}")
                 post_data = {
                     'title': post.title,
                     'selftext': post.selftext,
@@ -74,7 +79,8 @@ def crawl_subreddit(subreddit_name):
                     'author': str(post.author),
                     'num_comments': post.num_comments,
                     'permalink': post.permalink,
-                    'html_title': fetch_html_title(post.url)
+                    'html_title': fetch_html_title(post.url),
+                    'top comments': top_comments
                 }
 
                 line = json.dumps(post_data) + "\n"
