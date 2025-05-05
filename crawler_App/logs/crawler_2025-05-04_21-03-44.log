@@ -1,0 +1,9 @@
+Enter subreddits to crawl (comma-separated): Crawling: culinary_posts, vegeterian_posts
+
+🟡 Starting r/culinary_posts...
+
+🟡 Starting r/vegeterian_posts...
+❌ Error in r/vegeterian_posts: Redirect to /subreddits/search
+❌ Error in r/culinary_posts: Redirect to /subreddits/search
+
+ All subreddits processed!

@@ -1,0 +1,8 @@
+Enter subreddits to crawl (comma-separated): Crawling: vegeterian, culinary
+
+🟡 Starting r/vegeterian...
+
+🟡 Starting r/culinary...
+✅ Finished r/vegeterian: 5 posts, 2 files, ~0.00 MB
+📥 culinary: 25 posts, file: culinary_posts_3.json, size: 12.35 KB
+📥 culinary: 50 posts, file: culinary_posts_3.json, size: 24.96 KB
