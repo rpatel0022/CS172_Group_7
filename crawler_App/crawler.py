@@ -12,13 +12,13 @@ from dotenv import load_dotenv
 load_dotenv()
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
-user_agent = "RushiRecipeCollector/1.0"
+user_agent = "Group7-RecipeCrawler/1.0"
 reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
 
 # Config
 MAX_FILE_SIZE = 10 * 1024 * 1024         # 10 MB
 TOTAL_SIZE_LIMIT = 500 * 1024 * 1024     # 500 MB
-OUTPUT_DIR = "rushi_data"
+OUTPUT_DIR = "merged_data"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def get_next_file_index(prefix):
@@ -103,7 +103,6 @@ def crawl_subreddit(subreddit_name):
     except Exception as e:
         print(f"❌ Error in r/{subreddit_name}: {e}")
 
-#Try running with extra workers to see if it speeds up the process
 if __name__ == "__main__":
     subreddit_input = input("Enter subreddits to crawl (comma-separated): ")
     subreddits = [s.strip() for s in subreddit_input.split(",") if s.strip()]
