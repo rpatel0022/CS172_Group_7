@@ -9,16 +9,16 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
 # Load Reddit API credentials
-load_dotenv("redditcrawler.env")  # Modified to use your specific .env file
+load_dotenv()
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
-user_agent = "RushiRecipeCollector/1.0"
+user_agent = "Group7-RecipeCrawler/1.0"
 reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
 
 # Config
 MAX_FILE_SIZE = 10 * 1024 * 1024         # 10 MB
 TOTAL_SIZE_LIMIT = 500 * 1024 * 1024     # 500 MB
-OUTPUT_DIR = "Zijundata"
+OUTPUT_DIR = "merged_data"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def get_next_file_index(prefix):
@@ -64,15 +64,12 @@ def crawl_subreddit(subreddit_name):
                 if total_size >= TOTAL_SIZE_LIMIT:
                     print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
                     break
-
-                # Get top comments for this post
                 top_comments = []
                 try:
                     post.comments.replace_more(limit=0)
                     top_comments = [comment.body for comment in post.comments[:100]]
                 except Exception as e:
-                    print(f"❌ Error fetching comments for post {post_id}: {e}")
-
+                    print(f"⚠️ Error fetching comments for post {post_id}: {e}")
                 post_data = {
                     'title': post.title,
                     'selftext': post.selftext,
@@ -83,7 +80,7 @@ def crawl_subreddit(subreddit_name):
                     'num_comments': post.num_comments,
                     'permalink': post.permalink,
                     'html_title': fetch_html_title(post.url),
-                    'top_comments': top_comments  # Added the top comments
+                    'top comments': top_comments
                 }
 
                 line = json.dumps(post_data) + "\n"
@@ -112,7 +109,6 @@ def crawl_subreddit(subreddit_name):
     except Exception as e:
         print(f"❌ Error in r/{subreddit_name}: {e}")
 
-#Try running with extra workers to see if it speeds up the process
 if __name__ == "__main__":
     subreddit_input = input("Enter subreddits to crawl (comma-separated): ")
     subreddits = [s.strip() for s in subreddit_input.split(",") if s.strip()]
