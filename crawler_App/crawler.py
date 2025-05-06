@@ -64,7 +64,6 @@ def crawl_subreddit(subreddit_name):
                 if total_size >= TOTAL_SIZE_LIMIT:
                     print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
                     break
-
                 top_comments = []
                 try:
                     post.comments.replace_more(limit=0)
@@ -81,7 +80,7 @@ def crawl_subreddit(subreddit_name):
                     'num_comments': post.num_comments,
                     'permalink': post.permalink,
                     'html_title': fetch_html_title(post.url),
-                    'top_comments': top_comments
+                    'top comments': top_comments
                 }
 
                 line = json.dumps(post_data) + "\n"
