@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 
 # Load Reddit API credentials
-load_dotenv()
+load_dotenv("redditcrawler.env")  # Modified to use your specific .env file
 client_id = os.getenv("CLIENT_ID")
 client_secret = os.getenv("CLIENT_SECRET")
 user_agent = "RushiRecipeCollector/1.0"
@@ -18,7 +18,7 @@ reddit = praw.Reddit(client_id=client_id, client_secret=client_secret, user_agen
 # Config
 MAX_FILE_SIZE = 10 * 1024 * 1024         # 10 MB
 TOTAL_SIZE_LIMIT = 500 * 1024 * 1024     # 500 MB
-OUTPUT_DIR = "rushi_data"
+OUTPUT_DIR = "Zijundata"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def get_next_file_index(prefix):
@@ -65,6 +65,14 @@ def crawl_subreddit(subreddit_name):
                     print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
                     break
 
+                # Get top comments for this post
+                top_comments = []
+                try:
+                    post.comments.replace_more(limit=0)
+                    top_comments = [comment.body for comment in post.comments[:100]]
+                except Exception as e:
+                    print(f"❌ Error fetching comments for post {post_id}: {e}")
+
                 post_data = {
                     'title': post.title,
                     'selftext': post.selftext,
@@ -74,7 +82,8 @@ def crawl_subreddit(subreddit_name):
                     'author': str(post.author),
                     'num_comments': post.num_comments,
                     'permalink': post.permalink,
-                    'html_title': fetch_html_title(post.url)
+                    'html_title': fetch_html_title(post.url),
+                    'top_comments': top_comments  # Added the top comments
                 }
 
                 line = json.dumps(post_data) + "\n"
