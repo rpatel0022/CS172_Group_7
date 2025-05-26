@@ -39,7 +39,7 @@ def fetch_html_title(url):
 
 def crawl_subreddit(subreddit_name):
     try:
-        print(f"\n🟡 Starting r/{subreddit_name}...")
+        print(f"\n Starting r/{subreddit_name}...")
         subreddit = reddit.subreddit(subreddit_name)
         sources = [
             subreddit.top(time_filter='all', limit=None),
@@ -62,14 +62,14 @@ def crawl_subreddit(subreddit_name):
                     continue  
                 seen_post_ids.add(post_id)
                 if total_size >= TOTAL_SIZE_LIMIT:
-                    print(f"⛔ Reached total size limit of 500 MB for r/{subreddit_name}")
+                    print(f" Reached total size limit of 500 MB for r/{subreddit_name}")
                     break
                 top_comments = []
                 try:
                     post.comments.replace_more(limit=0)
                     top_comments = [comment.body for comment in post.comments[:100]]
                 except Exception as e:
-                    print(f"⚠️ Error fetching comments for post {post_id}: {e}")
+                    print(f" Error fetching comments for post {post_id}: {e}")
                 post_data = {
                     'title': post.title,
                     'selftext': post.selftext,
@@ -91,7 +91,7 @@ def crawl_subreddit(subreddit_name):
                     file_index += 1
                     current_file = open(os.path.join(OUTPUT_DIR, f"{file_prefix}_{file_index}.json"), 'w')
                     current_size = 0
-                    print(f"🔁 Switched to new file: {file_prefix}_{file_index}.json")
+                    print(f" Switched to new file: {file_prefix}_{file_index}.json")
 
                 current_file.write(line)
                 current_size += line_size
@@ -99,15 +99,15 @@ def crawl_subreddit(subreddit_name):
                 posts_fetched += 1
 
                 if posts_fetched % 25 == 0:
-                    print(f"📥 {subreddit_name}: {posts_fetched} posts, file: {file_prefix}_{file_index}.json, size: {current_size / 1024:.2f} KB")
+                    print(f" {subreddit_name}: {posts_fetched} posts, file: {file_prefix}_{file_index}.json, size: {current_size / 1024:.2f} KB")
 
                 time.sleep(0.25)  # throttle to avoid rate limit
 
         current_file.close()
-        print(f"✅ Finished r/{subreddit_name}: {posts_fetched} posts, {file_index + 1} files, ~{total_size / 1024 / 1024:.2f} MB")
+        print(f" Finished r/{subreddit_name}: {posts_fetched} posts, {file_index + 1} files, ~{total_size / 1024 / 1024:.2f} MB")
 
     except Exception as e:
-        print(f"❌ Error in r/{subreddit_name}: {e}")
+        print(f" Error in r/{subreddit_name}: {e}")
 
 if __name__ == "__main__":
     subreddit_input = input("Enter subreddits to crawl (comma-separated): ")
